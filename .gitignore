@@ -1,0 +1,29 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environments
+.env
+env/
+venv/
+.venv/
+ENV/
+
+# PyInstaller / Build outputs
+build/
+dist/
+*.spec
+
+# Local configurations / logs
+crash_log.txt
+settings.json
+devhub_settings.json
+
+# Compiled C binaries (dlls, objs, libs)
+*.dll
+*.obj
+*.lib
+*.exp
+*.exe

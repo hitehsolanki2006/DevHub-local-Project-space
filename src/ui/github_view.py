@@ -43,7 +43,7 @@ class GitHubView(ctk.CTkFrame):
         user_lbl = ctk.CTkLabel(self.auth_frame, text="Username:")
         user_lbl.grid(row=1, column=0, padx=(15, 5), pady=10, sticky="w")
         
-        self.user_entry = ctk.CTkEntry(self.auth_frame, placeholder_text="github-username")
+        self.user_entry = ctk.CTkEntry(self.auth_frame, placeholder_text="e.g. hitehsolanki2006")
         self.user_entry.grid(row=1, column=1, padx=5, pady=10, sticky="ew")
 
         # PAT Token Input
@@ -52,7 +52,7 @@ class GitHubView(ctk.CTkFrame):
         
         self.token_entry = ctk.CTkEntry(
             self.auth_frame, 
-            placeholder_text="ghp_xxxxxxxxxxxxxxxxxxxx", 
+            placeholder_text="e.g. ghp_1a2b3c4d5e...", 
             show="*"
         )
         self.token_entry.grid(row=1, column=3, padx=5, pady=10, sticky="ew")

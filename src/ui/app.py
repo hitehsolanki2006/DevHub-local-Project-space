@@ -1,6 +1,8 @@
 import os
 import customtkinter as ctk
 from PIL import Image
+from tkinter import filedialog, messagebox
+from core.editors import detect_editors
 
 # Import core modules
 from core.config import load_settings, save_settings
@@ -52,6 +54,197 @@ class DevHubApp(ctk.CTk):
 
         # Start with dashboard
         self.select_frame_by_name("dashboard")
+
+        # Check for first-run onboarding
+        if self.settings.get("first_run", True):
+            self.after(200, self.show_onboarding_dialog)
+
+    def show_onboarding_dialog(self):
+        """Displays a modal dialog on first run to setup Workspace Root and Default Editor."""
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("DevHub Setup Wizard")
+        dialog.geometry("520x460")
+        dialog.resizable(False, False)
+        dialog.transient(self) # Keep on top of main app
+        dialog.grab_set()      # Block input to main app
+
+        # Layout configure
+        dialog.grid_columnconfigure(0, weight=1)
+
+        # Header Title
+        title_lbl = ctk.CTkLabel(
+            dialog, 
+            text="Welcome to DevHub! 🚀", 
+            font=ctk.CTkFont(size=20, weight="bold")
+        )
+        title_lbl.pack(pady=(20, 5))
+
+        desc_lbl = ctk.CTkLabel(
+            dialog, 
+            text="Let's complete a quick first-time setup to get started.",
+            font=ctk.CTkFont(size=13),
+            text_color="gray60"
+        )
+        desc_lbl.pack(pady=(0, 20))
+
+        # --- STEP 1: Workspace Folder ---
+        ws_frame = ctk.CTkFrame(dialog)
+        ws_frame.pack(fill="x", padx=30, pady=10)
+
+        ws_title = ctk.CTkLabel(
+            ws_frame, 
+            text="1. Connect Projects Folder (Workspace Root)", 
+            font=ctk.CTkFont(weight="bold")
+        )
+        ws_title.pack(anchor="w", padx=15, pady=(10, 5))
+
+        ws_input_frame = ctk.CTkFrame(ws_frame, fg_color="transparent")
+        ws_input_frame.pack(fill="x", padx=15, pady=(0, 10))
+
+        ws_entry = ctk.CTkEntry(
+            ws_input_frame, 
+            placeholder_text="e.g. D:\\My projects", 
+            height=28
+        )
+        ws_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
+
+        def browse_workspace():
+            folder = filedialog.askdirectory(title="Select Projects Root Folder")
+            if folder:
+                ws_entry.delete(0, "end")
+                ws_entry.insert(0, os.path.normpath(folder))
+
+        ws_btn = ctk.CTkButton(ws_input_frame, text="Browse", width=70, height=28, command=browse_workspace)
+        ws_btn.pack(side="right")
+
+        # --- STEP 2: Code Editor Setup ---
+        ed_frame = ctk.CTkFrame(dialog)
+        ed_frame.pack(fill="x", padx=30, pady=10)
+
+        ed_title = ctk.CTkLabel(
+            ed_frame, 
+            text="2. Configure Code Editor", 
+            font=ctk.CTkFont(weight="bold")
+        )
+        ed_title.pack(anchor="w", padx=15, pady=(10, 5))
+
+        # Detect editors
+        detected_editors = detect_editors()
+        editor_names = list(detected_editors.keys())
+        
+        select_lbl = ctk.CTkLabel(ed_frame, text="Select Preferred Editor:")
+        select_lbl.pack(anchor="w", padx=15)
+
+        selector_frame = ctk.CTkFrame(ed_frame, fg_color="transparent")
+        selector_frame.pack(fill="x", padx=15, pady=(0, 5))
+
+        # Editor option menu
+        menu_values = editor_names + ["Custom Editor Path..."] if editor_names else ["Custom Editor Path..."]
+        ed_option = ctk.CTkOptionMenu(selector_frame, values=menu_values, height=28)
+        ed_option.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        if editor_names:
+            ed_option.set(editor_names[0])
+        else:
+            ed_option.set("Custom Editor Path...")
+
+        # Custom Editor inputs
+        custom_input_frame = ctk.CTkFrame(ed_frame, fg_color="transparent")
+        
+        custom_name_entry = ctk.CTkEntry(
+            custom_input_frame, 
+            placeholder_text="Editor Name (e.g. Cursor)", 
+            height=28
+        )
+        custom_name_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
+
+        custom_path_entry = ctk.CTkEntry(
+            custom_input_frame, 
+            placeholder_text="Executable Path (.exe)", 
+            height=28
+        )
+        custom_path_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
+
+        def browse_custom_exe():
+            file_path = filedialog.askopenfilename(
+                title="Select Editor Executable (.exe)",
+                filetypes=[("Executable Files", "*.exe")]
+            )
+            if file_path:
+                custom_path_entry.delete(0, "end")
+                custom_path_entry.insert(0, os.path.normpath(file_path))
+
+        custom_browse_btn = ctk.CTkButton(
+            custom_input_frame, 
+            text="Browse Exe", 
+            width=80, 
+            height=28, 
+            command=browse_custom_exe
+        )
+        custom_browse_btn.pack(side="right")
+
+        def on_editor_selection_changed(choice):
+            if choice == "Custom Editor Path...":
+                custom_input_frame.pack(fill="x", padx=15, pady=(5, 10))
+            else:
+                custom_input_frame.pack_forget()
+
+        ed_option.configure(command=on_editor_selection_changed)
+
+        # Trigger initial state of custom inputs
+        on_editor_selection_changed(ed_option.get())
+
+        # --- STEP 3: Complete ---
+        def complete_onboarding():
+            ws_path = ws_entry.get().strip()
+            if not ws_path:
+                messagebox.showerror("Error", "Please select a projects root folder.")
+                return
+            if not os.path.exists(ws_path):
+                messagebox.showerror("Error", "The projects root folder directory does not exist.")
+                return
+
+            selected_choice = ed_option.get()
+            final_editor_name = selected_choice
+            custom_editor_path = None
+
+            if selected_choice == "Custom Editor Path...":
+                final_editor_name = custom_name_entry.get().strip()
+                custom_editor_path = custom_path_entry.get().strip()
+
+                if not final_editor_name or not custom_editor_path:
+                    messagebox.showerror("Error", "Please fill in both custom editor Name and Path.")
+                    return
+                if not os.path.exists(custom_editor_path):
+                    messagebox.showerror("Error", "The custom editor executable path does not exist.")
+                    return
+
+            # Save configurations
+            self.settings["root_dirs"] = [os.path.normpath(ws_path)]
+            self.settings["default_editor"] = final_editor_name
+            self.settings["first_run"] = False
+
+            if custom_editor_path:
+                custom_map = self.settings.get("custom_editors", {})
+                custom_map[final_editor_name] = os.path.normpath(custom_editor_path)
+                self.settings["custom_editors"] = custom_map
+
+            save_settings(self.settings)
+
+            # Close onboarding and reload dashboard
+            dialog.destroy()
+            self.views["dashboard"].scan_roots(silent=True)
+            messagebox.showinfo("Setup Complete", "Welcome to DevHub! Your workspace is fully set up.")
+
+        finish_btn = ctk.CTkButton(
+            dialog, 
+            text="🚀 Finish Setup", 
+            font=ctk.CTkFont(weight="bold"), 
+            height=36,
+            fg_color="#2ecc71",
+            hover_color="#27ae60",
+            command=complete_onboarding
+        )
+        finish_btn.pack(pady=(20, 15))
 
     def create_sidebar(self):
         """Create navigation sidebar frame."""

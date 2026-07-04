@@ -10,7 +10,9 @@ DEFAULT_SETTINGS = {
     "custom_editors": {},
     "github_username": "",
     "github_token": "",
-    "theme": "dark"
+    "theme": "dark",
+    "first_run": True,
+    "cached_projects": None
 }
 
 def load_settings():

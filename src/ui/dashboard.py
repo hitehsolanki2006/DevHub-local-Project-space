@@ -20,6 +20,7 @@ class DashboardView(ctk.CTkFrame):
         self.projects = []
         self.editor_options = {}  # {EditorName: Path}
         self.visible_count = 12   # Paginate projects to reduce RAM usage and prevent lagging
+        self.project_cards = {}   # Store references to active card widgets to update state locally
         
         self.create_header()
         self.create_filter_bar()
@@ -208,6 +209,7 @@ class DashboardView(ctk.CTkFrame):
             self.visible_count = 12
 
         self.clear_project_cards()
+        self.project_cards = {}
 
         search_term = self.search_entry.get().strip().lower()
         selected_type = self.type_filter.get()
@@ -376,6 +378,13 @@ class DashboardView(ctk.CTkFrame):
         )
         log_btn.grid(row=0, column=3, padx=4)
 
+        # Store widget references for local status updates (avoids full list reload)
+        self.project_cards[proj["path"]] = {
+            "run_btn": run_btn,
+            "title_label": title_label,
+            "proj_name": proj["name"]
+        }
+
     def launch_editor(self, path, selected_editor):
         """Lookup editor path and invoke opening logic."""
         exe_path = self.editor_options.get(selected_editor)
@@ -390,8 +399,34 @@ class DashboardView(ctk.CTkFrame):
         if not success:
             messagebox.showerror("Error", msg)
 
+    def update_card_running_state(self, path, is_running, port=None):
+        """Locally update a single project card's running state widgets to avoid full reload."""
+        if path not in self.project_cards:
+            return
+            
+        card_data = self.project_cards[path]
+        run_btn = card_data["run_btn"]
+        title_label = card_data["title_label"]
+        proj_name = card_data["proj_name"]
+        
+        if is_running:
+            title_text = f"{proj_name} (Running on Port {port})"
+            title_label.configure(text=title_text, text_color="#3498db")
+            run_btn.configure(
+                text="⏹️ Stop",
+                fg_color="#e74c3c",
+                hover_color="#c0392b"
+            )
+        else:
+            title_label.configure(text=proj_name, text_color=None)
+            run_btn.configure(
+                text="▶️ Run",
+                fg_color="#3498db",
+                hover_color="#2980b9"
+            )
+
     def toggle_project_run(self, path, proj_type):
-        """Start or stop project background execution. Opens log console on startup error."""
+        """Start or stop project background execution. Updates specific widgets directly (no list reload)."""
         running = get_running_projects()
         name = os.path.basename(path)
         
@@ -399,7 +434,7 @@ class DashboardView(ctk.CTkFrame):
             # Stop it
             success, msg = stop_project(path)
             if success:
-                self.refresh_projects()
+                self.update_card_running_state(path, is_running=False)
             else:
                 messagebox.showerror("Error", msg)
         else:
@@ -413,9 +448,10 @@ class DashboardView(ctk.CTkFrame):
             )
             
             if success:
-                self.refresh_projects()
+                self.update_card_running_state(path, is_running=True, port=port)
             else:
-                self.refresh_projects()
+                # If startup failed, update state to stopped
+                self.update_card_running_state(path, is_running=False)
                 messagebox.showerror("Error", f"Failed to start server:\n{msg}")
 
     def on_log_received(self, path, log_line):

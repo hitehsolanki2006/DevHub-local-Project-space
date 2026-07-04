@@ -79,7 +79,7 @@ class DashboardView(ctk.CTkFrame):
         # Dropdown to filter by type
         self.type_filter = ctk.CTkOptionMenu(
             self.filter_frame,
-            values=["All Types", "Node.js", "Python", "Rust", "Go", "HTML/CSS"],
+            values=["All Types", "Node.js", "Python", "Rust", "Go", "C/C++", "Java/Kotlin", "C#/.NET", "PHP", "Ruby", "HTML/CSS"],
             command=self.filter_projects
         )
         self.type_filter.grid(row=0, column=1, padx=(0, 15), pady=10)
@@ -90,26 +90,90 @@ class DashboardView(ctk.CTkFrame):
         self.scroll_frame.grid(row=2, column=0, sticky="nsew")
         self.scroll_frame.grid_columnconfigure(0, weight=1)
 
-    def refresh_projects(self):
-        """Reload project definitions and refresh UI cards."""
-        # Refresh editor list
+    def load_cached_projects(self):
+        """Load projects from config cache. If empty, automatically scan."""
         self.editor_options = detect_editors()
+        cached = self.controller.settings.get("cached_projects", None)
         
-        # Load directories to scan
-        root_dirs = self.controller.settings.get("root_dirs", [])
-        
-        if not root_dirs:
-            # Clear UI and show onboarding warning
+        # If cache is missing/empty, and root directories are defined, auto scan
+        if cached is None:
+            root_dirs = self.controller.settings.get("root_dirs", [])
+            if root_dirs:
+                self.scan_roots(silent=True)
+                return
+            else:
+                self.projects = []
+        else:
+            self.projects = cached
+
+        if not self.projects and not self.controller.settings.get("root_dirs", []):
             self.clear_project_cards()
             self.show_no_roots_warning()
             return
 
-        self.projects = []
-        for root in root_dirs:
-            if os.path.exists(root):
-                scanned = scan_directory(root)
-                self.projects.extend(scanned)
+        self.filter_projects()
 
+    def refresh_projects(self):
+        """Interface method mapped to load_cached_projects."""
+        self.load_cached_projects()
+
+    def scan_roots(self, silent=False):
+        """Perform full disk scan and update settings cache."""
+        self.editor_options = detect_editors()
+        root_dirs = self.controller.settings.get("root_dirs", [])
+        
+        if not root_dirs:
+            self.clear_project_cards()
+            self.show_no_roots_warning()
+            return
+
+        # Disable button during scan to indicate work
+        self.rescan_btn.configure(state="disabled", text="Scanning...")
+        self.update()
+
+        try:
+            scanned_projects = []
+            for root in root_dirs:
+                if os.path.exists(root):
+                    scanned = scan_directory(root)
+                    scanned_projects.extend(scanned)
+
+            self.projects = scanned_projects
+            self.controller.settings["cached_projects"] = self.projects
+            save_settings(self.controller.settings)
+            
+            self.filter_projects()
+
+            if not silent:
+                messagebox.showinfo("Scan Complete", f"Scanned directories and found {len(self.projects)} projects.")
+        finally:
+            self.rescan_btn.configure(state="normal", text="🔄 Scan Roots")
+
+    def add_project_to_cache(self, name, path):
+        """Directly insert a project into cache to avoid full disk scan."""
+        from core.scanner import PROJECT_SIGNATURES
+        
+        # Check files inside directory to match signature
+        proj_type = "HTML/CSS"
+        for sig, t in PROJECT_SIGNATURES.items():
+            if os.path.exists(os.path.join(path, sig)):
+                proj_type = t
+                break
+        
+        new_proj = {
+            "name": name,
+            "path": os.path.normpath(path),
+            "type": proj_type
+        }
+
+        # Prevent duplicate entries for the same path
+        self.projects = [p for p in self.projects if p["path"] != new_proj["path"]]
+        self.projects.append(new_proj)
+        self.projects.sort(key=lambda x: x["name"].lower())
+
+        self.controller.settings["cached_projects"] = self.projects
+        save_settings(self.controller.settings)
+        
         self.filter_projects()
 
     def clear_project_cards(self):
@@ -136,11 +200,6 @@ class DashboardView(ctk.CTkFrame):
             command=lambda: self.controller.select_frame_by_name("settings")
         )
         go_settings_btn.grid(row=1, column=0)
-
-    def scan_roots(self):
-        """Manual trigger to rescan filesystems."""
-        self.refresh_projects()
-        messagebox.showinfo("Scan Complete", f"Scanned directories and found {len(self.projects)} projects.")
 
     def filter_projects(self, *args):
         """Re-render project cards matching search term and type filter."""
@@ -469,7 +528,7 @@ class DashboardView(ctk.CTkFrame):
 
                 # Success, refresh dashboard
                 dialog.destroy()
-                self.refresh_projects()
+                self.add_project_to_cache(proj_name, target_dir)
                 messagebox.showinfo("Success", f"Project '{proj_name}' created successfully!")
             except Exception as ex:
                 messagebox.showerror("Error", f"Failed to create project folders: {ex}")

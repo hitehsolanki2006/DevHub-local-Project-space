@@ -65,6 +65,40 @@ void search_directory(const wchar_t* current_path, int depth, int max_depth, Pro
                 wcscpy(project_type, L"Go");
                 break;
             }
+            // Check for C/C++ project
+            else if (wcscmp(find_data.cFileName, L"CMakeLists.txt") == 0 ||
+                     wcscmp(find_data.cFileName, L"Makefile") == 0) {
+                is_project = 1;
+                wcscpy(project_type, L"C/C++");
+                break;
+            }
+            // Check for Java/Kotlin project
+            else if (wcscmp(find_data.cFileName, L"pom.xml") == 0 ||
+                     wcscmp(find_data.cFileName, L"build.gradle") == 0 ||
+                     wcscmp(find_data.cFileName, L"build.gradle.kts") == 0) {
+                is_project = 1;
+                wcscpy(project_type, L"Java/Kotlin");
+                break;
+            }
+            // Check for C#/.NET project
+            else if (wcsstr(find_data.cFileName, L".csproj") != NULL ||
+                     wcsstr(find_data.cFileName, L".sln") != NULL) {
+                is_project = 1;
+                wcscpy(project_type, L"C#/.NET");
+                break;
+            }
+            // Check for PHP project
+            else if (wcscmp(find_data.cFileName, L"composer.json") == 0) {
+                is_project = 1;
+                wcscpy(project_type, L"PHP");
+                break;
+            }
+            // Check for Ruby project
+            else if (wcscmp(find_data.cFileName, L"Gemfile") == 0) {
+                is_project = 1;
+                wcscpy(project_type, L"Ruby");
+                break;
+            }
             // Check for static web project
             else if (wcscmp(find_data.cFileName, L"index.html") == 0) {
                 is_project = 1;

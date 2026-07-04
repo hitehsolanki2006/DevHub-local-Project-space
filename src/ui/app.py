@@ -132,7 +132,7 @@ class DevHubApp(ctk.CTk):
         # Highlight active button
         if name == "dashboard":
             self.dash_button.configure(fg_color=("gray75", "gray25"))
-            self.views["dashboard"].refresh_projects() # Automatically refresh project list
+            self.views["dashboard"].load_cached_projects() # Load cached projects instead of scanning every time!
         elif name == "github":
             self.github_button.configure(fg_color=("gray75", "gray25"))
             self.views["github"].load_repositories()

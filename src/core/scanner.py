@@ -10,6 +10,13 @@ PROJECT_SIGNATURES = {
     "Pipfile": "Python",
     "Cargo.toml": "Rust",
     "go.mod": "Go",
+    "CMakeLists.txt": "C/C++",
+    "Makefile": "C/C++",
+    "pom.xml": "Java/Kotlin",
+    "build.gradle": "Java/Kotlin",
+    "build.gradle.kts": "Java/Kotlin",
+    "composer.json": "PHP",
+    "Gemfile": "Ruby",
     "index.html": "HTML/CSS"
 }
 
@@ -52,6 +59,26 @@ def python_scan(current_path, depth, max_depth, callback):
                 elif name == "go.mod":
                     is_project = True
                     project_type = "Go"
+                    break
+                elif name in ("CMakeLists.txt", "Makefile"):
+                    is_project = True
+                    project_type = "C/C++"
+                    break
+                elif name in ("pom.xml", "build.gradle", "build.gradle.kts"):
+                    is_project = True
+                    project_type = "Java/Kotlin"
+                    break
+                elif name.endswith(".csproj") or name.endswith(".sln"):
+                    is_project = True
+                    project_type = "C#/.NET"
+                    break
+                elif name == "composer.json":
+                    is_project = True
+                    project_type = "PHP"
+                    break
+                elif name == "Gemfile":
+                    is_project = True
+                    project_type = "Ruby"
                     break
                 elif name == "index.html" and not project_type:
                     is_project = True

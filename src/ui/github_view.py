@@ -351,6 +351,8 @@ class GitHubView(ctk.CTkFrame):
             )
 
             if result.returncode == 0:
+                # Add to cached projects and refresh
+                self.controller.after(0, lambda: self.controller.views["dashboard"].add_project_to_cache(name, path))
                 self.controller.after(0, lambda: messagebox.showinfo(
                     "Clone Complete", 
                     f"Successfully cloned repository '{name}'!\nIt is now indexed on the Dashboard."

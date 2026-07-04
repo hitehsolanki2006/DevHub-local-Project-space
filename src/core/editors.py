@@ -40,6 +40,43 @@ COMMON_EDITORS = {
             r"C:\Program Files\Sublime Text\sublime_text.exe",
             r"C:\Program Files\Sublime Text 3\sublime_text.exe"
         ]
+    },
+    "PyCharm": {
+        "registry_paths": [
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\App Paths\pycharm64.exe"),
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\App Paths\pycharm64.exe"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\App Paths\pycharm.exe")
+        ],
+        "default_paths": [
+            os.path.expandvars(r"%PROGRAMFILES%\JetBrains\PyCharm\bin\pycharm64.exe")
+        ]
+    },
+    "WebStorm": {
+        "registry_paths": [
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\App Paths\webstorm64.exe"),
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\App Paths\webstorm64.exe")
+        ],
+        "default_paths": [
+            os.path.expandvars(r"%PROGRAMFILES%\JetBrains\WebStorm\bin\webstorm64.exe")
+        ]
+    },
+    "IntelliJ IDEA": {
+        "registry_paths": [
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\App Paths\idea64.exe"),
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\App Paths\idea64.exe")
+        ],
+        "default_paths": [
+            os.path.expandvars(r"%PROGRAMFILES%\JetBrains\IntelliJ IDEA\bin\idea64.exe")
+        ]
+    },
+    "CLion": {
+        "registry_paths": [
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\App Paths\clion64.exe"),
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\App Paths\clion64.exe")
+        ],
+        "default_paths": [
+            os.path.expandvars(r"%PROGRAMFILES%\JetBrains\CLion\bin\clion64.exe")
+        ]
     }
 }
 

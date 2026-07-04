@@ -88,6 +88,18 @@ COMMON_EDITORS = {
             os.path.expandvars(r"%LOCALAPPDATA%\Programs\Kiro\Kiro.exe"),
             r"C:\Program Files\Kiro\Kiro.exe"
         ]
+    },
+    "Antigravity": {
+        "registry_paths": [
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\App Paths\antigravity.exe"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\App Paths\antigravity.exe")
+        ],
+        "default_paths": [
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\antigravity\Antigravity.exe"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Antigravity\Antigravity.exe"),
+            os.path.expandvars(r"%APPDATA%\.gemini\antigravity\Antigravity.exe"),
+            os.path.expandvars(r"%USERPROFILE%\.gemini\antigravity\Antigravity.exe")
+        ]
     }
 }
 

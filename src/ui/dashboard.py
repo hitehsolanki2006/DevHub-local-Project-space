@@ -19,6 +19,7 @@ class DashboardView(ctk.CTkFrame):
 
         self.projects = []
         self.editor_options = {}  # {EditorName: Path}
+        self.visible_count = 12   # Paginate projects to reduce RAM usage and prevent lagging
         
         self.create_header()
         self.create_filter_bar()
@@ -203,12 +204,15 @@ class DashboardView(ctk.CTkFrame):
 
     def filter_projects(self, *args):
         """Re-render project cards matching search term and type filter."""
+        if args:
+            self.visible_count = 12
+
         self.clear_project_cards()
 
         search_term = self.search_entry.get().strip().lower()
         selected_type = self.type_filter.get()
 
-        row = 0
+        matched_projects = []
         for proj in self.projects:
             # Match search keyword
             if search_term and search_term not in proj["name"].lower():
@@ -218,10 +222,30 @@ class DashboardView(ctk.CTkFrame):
             if selected_type != "All Types" and proj["type"] != selected_type:
                 continue
 
+            matched_projects.append(proj)
+
+        # Slice list based on visible_count
+        visible_projects = matched_projects[:self.visible_count]
+
+        row = 0
+        for proj in visible_projects:
             self.create_project_card(proj, row)
             row += 1
 
-        if row == 0 and len(self.projects) > 0:
+        # Render "Show More" button if there are more projects
+        if len(matched_projects) > self.visible_count:
+            remaining = len(matched_projects) - self.visible_count
+            load_more_btn = ctk.CTkButton(
+                self.scroll_frame,
+                text=f"Show More Projects ({remaining} remaining) 🔽",
+                height=35,
+                command=self.load_more_projects,
+                fg_color="gray30",
+                hover_color="gray40"
+            )
+            load_more_btn.grid(row=row, column=0, pady=15, padx=5, sticky="ew")
+
+        if len(matched_projects) == 0 and len(self.projects) > 0:
             no_results = ctk.CTkLabel(
                 self.scroll_frame, 
                 text="No projects match your search filters.", 
@@ -229,23 +253,34 @@ class DashboardView(ctk.CTkFrame):
             )
             no_results.grid(row=0, column=0, pady=40)
 
+    def load_more_projects(self):
+        """Load next batch of projects to keep UI fast and lightweight."""
+        self.visible_count += 12
+        self.filter_projects()
+
     def create_project_card(self, proj, row):
-        """Create a card container for a single project."""
+        """Create a card container for a single project with optimized layout and widgets."""
         card = ctk.CTkFrame(self.scroll_frame, height=90)
         card.grid(row=row, column=0, sticky="ew", pady=6, padx=5)
         card.grid_columnconfigure(1, weight=1)
+        card.grid_rowconfigure(0, weight=1)
 
         # Type indicator colors
         badge_colors = {
-            "Node.js": ("#2ecc71", "#27ae60"),
-            "Python": ("#3498db", "#2980b9"),
-            "Rust": ("#e67e22", "#d35400"),
-            "Go": ("#1abc9c", "#16a085"),
-            "HTML/CSS": ("#9b59b6", "#8e44ad")
+            "Node.js": ("#2ecc71", "#27ae60"),      # Green
+            "Python": ("#3498db", "#2980b9"),       # Blue
+            "Rust": ("#e67e22", "#d35400"),         # Orange
+            "Go": ("#1abc9c", "#16a085"),           # Teal
+            "C/C++": ("#e74c3c", "#c0392b"),        # Red
+            "Java/Kotlin": ("#9b59b6", "#8e44ad"),  # Purple
+            "C#/.NET": ("#1abc9c", "#16a085"),      # Cyan
+            "PHP": ("#34495e", "#2c3e50"),          # Slate Blue
+            "Ruby": ("#e74c3c", "#c0392b"),         # Red
+            "HTML/CSS": ("#f1c40f", "#f39c12")      # Yellow/Gold
         }
         color = badge_colors.get(proj["type"], ("#7f8c8d", "#7f8c8d"))
 
-        # Left Column: Project Type Badge
+        # Left Column: Project Type Badge (simplified layout without rowspan to prevent squishing)
         badge = ctk.CTkLabel(
             card,
             text=proj["type"].upper(),
@@ -253,14 +288,14 @@ class DashboardView(ctk.CTkFrame):
             fg_color=color[0],
             text_color="white",
             corner_radius=4,
-            width=70,
+            width=80,
             height=24
         )
-        badge.grid(row=0, column=0, rowspan=2, padx=15, pady=15)
+        badge.grid(row=0, column=0, padx=15, pady=20, sticky="w")
 
         # Center Column: Project Details (Name, Path)
         info_frame = ctk.CTkFrame(card, fg_color="transparent")
-        info_frame.grid(row=0, column=1, rowspan=2, sticky="w", pady=10)
+        info_frame.grid(row=0, column=1, sticky="w", pady=10)
 
         # Running status text if running
         running_projects = get_running_projects()
@@ -271,11 +306,12 @@ class DashboardView(ctk.CTkFrame):
         if is_running:
             title_text += f" (Running on Port {port_num})"
 
+        # We remove explicit ("black", "white") to let CustomTkinter choose default visible colors automatically
         title_label = ctk.CTkLabel(
             info_frame,
             text=title_text,
-            font=ctk.CTkFont(size=16, weight="bold"),
-            text_color="#3498db" if is_running else ("black", "white")
+            font=ctk.CTkFont(size=15, weight="bold"),
+            text_color="#3498db" if is_running else None
         )
         title_label.grid(row=0, column=0, sticky="w")
 
@@ -283,13 +319,13 @@ class DashboardView(ctk.CTkFrame):
             info_frame,
             text=proj["path"],
             font=ctk.CTkFont(size=11),
-            text_color="gray50"
+            text_color="gray60"
         )
         path_label.grid(row=1, column=0, sticky="w")
 
         # Right Column: Action Buttons Frame
         btn_frame = ctk.CTkFrame(card, fg_color="transparent")
-        btn_frame.grid(row=0, column=2, rowspan=2, padx=15, sticky="e")
+        btn_frame.grid(row=0, column=2, padx=15, sticky="e")
 
         # 1. Editor Dropdown
         editors = list(self.editor_options.keys()) + list(self.controller.settings.get("custom_editors", {}).keys())
@@ -342,10 +378,8 @@ class DashboardView(ctk.CTkFrame):
 
     def launch_editor(self, path, selected_editor):
         """Lookup editor path and invoke opening logic."""
-        # Find editor exe path
         exe_path = self.editor_options.get(selected_editor)
         if not exe_path:
-            # Check custom editors settings
             exe_path = self.controller.settings.get("custom_editors", {}).get(selected_editor)
 
         if not exe_path:
@@ -357,8 +391,10 @@ class DashboardView(ctk.CTkFrame):
             messagebox.showerror("Error", msg)
 
     def toggle_project_run(self, path, proj_type):
-        """Start or stop project background execution."""
+        """Start or stop project background execution. Opens log console on startup error."""
         running = get_running_projects()
+        name = os.path.basename(path)
+        
         if path in running:
             # Stop it
             success, msg = stop_project(path)
@@ -367,19 +403,20 @@ class DashboardView(ctk.CTkFrame):
             else:
                 messagebox.showerror("Error", msg)
         else:
-            # Start it
+            # Start it (shows log window to indicate startup activity)
+            self.show_log_console(path, name)
+            
             success, msg, port = run_project(
                 path, 
                 proj_type, 
                 log_callback=self.on_log_received
             )
+            
             if success:
                 self.refresh_projects()
-                # Automatically open logs on start
-                name = os.path.basename(path)
-                self.show_log_console(path, name)
             else:
-                messagebox.showerror("Error", msg)
+                self.refresh_projects()
+                messagebox.showerror("Error", f"Failed to start server:\n{msg}")
 
     def on_log_received(self, path, log_line):
         """Append log line to running console if matching active log path."""
@@ -446,7 +483,10 @@ class DashboardView(ctk.CTkFrame):
         self.log_textbox.configure(state="disabled")
 
     def clear_console(self):
-        """Clear text console window."""
+        """Clear text console window and backend logs."""
+        from core.runner import clear_project_logs
+        if self.active_log_path:
+            clear_project_logs(self.active_log_path)
         self.log_textbox.configure(state="normal")
         self.log_textbox.delete("1.0", "end")
         self.log_textbox.configure(state="disabled")

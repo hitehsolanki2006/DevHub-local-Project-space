@@ -9,6 +9,7 @@ import json
 # Structure: { project_path: { "process": Popen, "port": int, "thread": Thread, "logs": list } }
 ACTIVE_RUNS = {}
 ACTIVE_RUNS_LOCK = threading.Lock()
+LOG_HISTORY = {}
 
 def is_port_in_use(port):
     """Check if a port is currently in use on localhost."""
@@ -57,6 +58,11 @@ def log_reader_thread(proc, project_path, log_callback):
         with ACTIVE_RUNS_LOCK:
             if project_path in ACTIVE_RUNS:
                 ACTIVE_RUNS[project_path]["logs"].append(decoded_line)
+            
+            # Store in persistent log history
+            if project_path not in LOG_HISTORY:
+                LOG_HISTORY[project_path] = []
+            LOG_HISTORY[project_path].append(decoded_line)
                 
         if log_callback:
             log_callback(project_path, decoded_line)
@@ -68,8 +74,15 @@ def log_reader_thread(proc, project_path, log_callback):
             # Only remove if it's the same process
             if ACTIVE_RUNS[project_path]["process"] == proc:
                 ACTIVE_RUNS.pop(project_path)
+        
+        # Append termination marker
+        term_line = "[Server Process Terminated]\n"
+        if project_path not in LOG_HISTORY:
+            LOG_HISTORY[project_path] = []
+        LOG_HISTORY[project_path].append(term_line)
+        
     if log_callback:
-        log_callback(project_path, "[Server Process Terminated]\n")
+        log_callback(project_path, term_line)
 
 def run_project(project_path, project_type, command_override=None, target_port=None, log_callback=None):
     """Launch the project server.
@@ -161,6 +174,10 @@ def run_project(project_path, project_type, command_override=None, target_port=N
 
         cmd = [sys.executable, "-m", "http.server", str(port)]
 
+    cmd_str = " ".join(cmd)
+    with ACTIVE_RUNS_LOCK:
+        LOG_HISTORY[project_path] = [f"[Starting Server]: {cmd_str}\n"]
+
     try:
         # Start subprocess
         # On Windows, we use shell=True for npm commands or CREATE_NO_WINDOW flags to hide cmd shells
@@ -188,11 +205,18 @@ def run_project(project_path, project_type, command_override=None, target_port=N
                 "port": port,
                 "thread": t,
                 "logs": [],
-                "command": " ".join(cmd)
+                "command": cmd_str
             }
 
         return True, "Server started successfully.", port
     except Exception as e:
+        err_msg = f"[Startup Error]: Failed to start server: {e}\n"
+        with ACTIVE_RUNS_LOCK:
+            if project_path not in LOG_HISTORY:
+                LOG_HISTORY[project_path] = []
+            LOG_HISTORY[project_path].append(err_msg)
+        if log_callback:
+            log_callback(project_path, err_msg)
         return False, f"Failed to start server: {e}", None
 
 def stop_project(project_path):
@@ -233,6 +257,11 @@ def get_running_projects():
 def get_project_logs(project_path):
     """Get accumulated logs for a project."""
     with ACTIVE_RUNS_LOCK:
-        if project_path in ACTIVE_RUNS:
-            return "".join(ACTIVE_RUNS[project_path]["logs"])
+        if project_path in LOG_HISTORY:
+            return "".join(LOG_HISTORY[project_path])
         return ""
+
+def clear_project_logs(project_path):
+    """Wipe accumulated logs for a project."""
+    with ACTIVE_RUNS_LOCK:
+        LOG_HISTORY[project_path] = []

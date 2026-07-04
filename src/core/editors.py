@@ -77,6 +77,17 @@ COMMON_EDITORS = {
         "default_paths": [
             os.path.expandvars(r"%PROGRAMFILES%\JetBrains\CLion\bin\clion64.exe")
         ]
+    },
+    "Kiro": {
+        "registry_paths": [
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\App Paths\kiro.exe"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\App Paths\kiro.exe")
+        ],
+        "default_paths": [
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\kiro\Kiro.exe"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Kiro\Kiro.exe"),
+            r"C:\Program Files\Kiro\Kiro.exe"
+        ]
     }
 }
 

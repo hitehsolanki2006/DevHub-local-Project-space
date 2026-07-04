@@ -47,9 +47,11 @@ def check_registry_path(hive, subkey):
     """Check registry key for default string value (which contains the exe path)."""
     try:
         with winreg.OpenKey(hive, subkey, 0, winreg.KEY_READ) as key:
-            val, _ = winreg.QueryValue(key, None)
-            if val and os.path.exists(val):
-                return os.path.normpath(val)
+            val = winreg.QueryValue(key, "")
+            if val:
+                val = val.strip('"')
+                if os.path.exists(val):
+                    return os.path.normpath(val)
     except OSError:
         pass
     return None

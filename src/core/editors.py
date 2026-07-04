@@ -163,8 +163,13 @@ def open_in_editor(editor_name, editor_path, project_path):
             # Notepad++ open folder command
             cmd = [editor_path, "-openFolder", project_path]
             
-        # Run process detached so it does not block our GUI
-        subprocess.Popen(cmd, creationflags=subprocess.DETACHED_PROCESS)
+        # Run process detached so it does not block our GUI and redirect logs to DEVNULL
+        subprocess.Popen(
+            cmd, 
+            stdout=subprocess.DEVNULL, 
+            stderr=subprocess.DEVNULL, 
+            creationflags=subprocess.DETACHED_PROCESS
+        )
         return True, "Editor launched successfully."
     except Exception as e:
         return False, f"Failed to open project in editor: {e}"
